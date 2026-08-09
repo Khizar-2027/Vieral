@@ -1,0 +1,25 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# Database
+vieral_dev.db
+*.db-journal
+
+# Environment secrets
+.env
+
+# Generated/uploaded media - these can get large and don't belong in git
+storage/
+
+# Piper voice models - large binary files, better fetched separately
+models/*.onnx
+models/*.onnx.json
+
+# Test files we created along the way
+test_*.py
+test_output.mp3
+test_piper_output.wav
+output_test.mp4
+background.mp4
