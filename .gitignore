@@ -23,3 +23,7 @@ test_output.mp3
 test_piper_output.wav
 output_test.mp4
 background.mp4
+
+*.mp4
+silence_log*.txt
+frontend/node_modules/

@@ -34,3 +34,8 @@ class Video(Base):
 
     project = relationship("Project", back_populates="videos")
     jobs = relationship("Job", back_populates="video", cascade="all, delete-orphan")
+
+    trim_start: Mapped[float | None] = mapped_column(nullable=True)
+    trim_end: Mapped[float | None] = mapped_column(nullable=True)
+    crop_aspect: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    source_video_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
