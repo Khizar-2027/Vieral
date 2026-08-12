@@ -19,6 +19,9 @@ from app.services.pipeline import run_pipeline
 from app.models.video import VideoStatus
 from fastapi.responses import FileResponse
 
+from pydantic import BaseModel
+from app.services.pipeline import run_editor_pipeline
+
 router = APIRouter(prefix="/projects/{project_id}/videos", tags=["videos"])
 
 
@@ -42,7 +45,7 @@ def create_video(
     project_id: str,
     background_tasks: BackgroundTasks,
     title: str = Form(...),
-    script_text: str = Form(...),
+    script_text: str | None = Form(None),
     background_video: UploadFile = File(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -116,3 +119,33 @@ def download_video(
     if not video.output_file_path or not os.path.exists(video.output_file_path):
         raise HTTPException(status_code=400, detail="Video is not rendered yet")
     return FileResponse(video.output_file_path, media_type="video/mp4", filename=f"{video.title}.mp4")
+
+class VideoEditRequest(BaseModel):
+    trim_start: float | None = None
+    trim_end: float | None = None
+    crop_aspect: str | None = None
+    remove_silence: bool = False
+
+
+@router.patch("/{video_id}/edit", response_model=VideoOut)
+def edit_video(
+    project_id: str,
+    video_id: str,
+    payload: VideoEditRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    video = _get_owned_video(project_id, video_id, db, current_user)
+
+    video.trim_start = payload.trim_start
+    video.trim_end = payload.trim_end
+    video.crop_aspect = payload.crop_aspect
+    video.remove_silence = payload.remove_silence
+    video.status = VideoStatus.processing
+    db.commit()
+    db.refresh(video)
+
+    background_tasks.add_task(run_editor_pipeline, video.id)
+
+    return video
