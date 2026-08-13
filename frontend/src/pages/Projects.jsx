@@ -14,9 +14,7 @@ export default function Projects() {
     setProjects(res.data);
   }
 
-  useEffect(() => {
-    loadProjects();
-  }, []);
+  useEffect(() => { loadProjects(); }, []);
 
   async function handleCreate(e) {
     e.preventDefault();
@@ -31,30 +29,31 @@ export default function Projects() {
   }
 
   return (
-    <div style={{ maxWidth: 600, margin: "40px auto" }}>
-      <div style={{ display: "flex", justifyContent: "space-between" }}>
-        <h2>Your Projects</h2>
-        <button onClick={logout}>Log Out</button>
+    <div style={{ maxWidth: 720, margin: "0 auto", padding: "48px 24px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
+        <h1 style={{ fontSize: 24 }}>Your Projects</h1>
+        <button className="btn btn-secondary" onClick={logout}>Log Out</button>
       </div>
 
-      <form onSubmit={handleCreate}>
-        <input
-          placeholder="New project name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-        />
-        <button type="submit">Create</button>
+      <form onSubmit={handleCreate} className="card" style={{ padding: 20, display: "flex", gap: 10, marginBottom: 28 }}>
+        <input className="input" style={{ marginBottom: 0, flex: 1 }} placeholder="New project name"
+          value={name} onChange={(e) => setName(e.target.value)} required />
+        <button className="btn btn-primary" type="submit">Create</button>
       </form>
-      {error && <p style={{ color: "red" }}>{error}</p>}
+      {error && <p style={{ color: "var(--danger)", fontSize: 13, marginBottom: 16 }}>{error}</p>}
 
-      <ul>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {projects.map((p) => (
-          <li key={p.id}>
-            <Link to={`/projects/${p.id}`}>{p.name}</Link>
-          </li>
+          <Link key={p.id} to={`/projects/${p.id}`} style={{ textDecoration: "none", color: "inherit" }}>
+            <div className="card" style={{ padding: "16px 20px", fontWeight: 500 }}>
+              {p.name}
+            </div>
+          </Link>
         ))}
-      </ul>
+        {projects.length === 0 && (
+          <p style={{ color: "var(--text-secondary)", fontSize: 14 }}>No projects yet — create one above.</p>
+        )}
+      </div>
     </div>
   );
 }
