@@ -38,12 +38,16 @@ def run_editor_pipeline(video_id: str) -> None:
             if video.remove_silence:
                 current_path = remove_silences(current_path, output_dir)
 
-            captions_path = generate_captions(current_path, output_dir)
-            video.captions_file_path = captions_path
-            db.commit()
+            if video.add_captions:
+                captions_path = generate_captions(current_path, output_dir)
+                video.captions_file_path = captions_path
+                db.commit()
 
-            output_path = burn_captions(current_path, captions_path, output_dir)
-            video.output_file_path = output_path
+                output_path = burn_captions(current_path, captions_path, output_dir)
+                video.output_file_path = output_path
+            else:
+                video.output_file_path = current_path
+
             video.status = VideoStatus.done
             db.commit()
 

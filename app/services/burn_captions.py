@@ -2,6 +2,8 @@ import subprocess
 import uuid
 from pathlib import Path
 
+FONTS_DIR = Path(__file__).resolve().parent.parent / "assets" / "fonts"
+
 
 def burn_captions(video_path: str, captions_path: str, output_dir: str) -> str:
     """
@@ -12,13 +14,25 @@ def burn_captions(video_path: str, captions_path: str, output_dir: str) -> str:
     output_path = Path(output_dir) / f"{uuid.uuid4()}_final.mp4"
 
     captions_for_filter = captions_path.replace("\\", "/").replace(":", "\\:")
+    fonts_dir_for_filter = str(FONTS_DIR).replace("\\", "/").replace(":", "\\:")
+
+    style = (
+        "FontName=Bebas Neue,"
+        "FontSize=14,"
+        "PrimaryColour=&H00FFFFFF,"
+        "OutlineColour=&H00000000,"
+        "BorderStyle=1,"
+        "Outline=1.5,"
+        "Shadow=0,"
+        "MarginV=80"
+    )
 
     subprocess.run(
         [
             "ffmpeg",
             "-y",
             "-i", video_path,
-            "-vf", f"subtitles={captions_for_filter}",
+            "-vf", f"subtitles={captions_for_filter}:force_style='{style}':fontsdir='{fonts_dir_for_filter}'",
             "-c:v", "libx264",
             "-c:a", "copy",
             str(output_path),

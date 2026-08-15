@@ -3,8 +3,7 @@ from pathlib import Path
 
 from faster_whisper import WhisperModel
 
-_model = WhisperModel("base", device="cpu", compute_type="int8")
-
+_model = WhisperModel("small", device="cpu", compute_type="int8")
 
 def _format_timestamp(seconds: float) -> str:
     """Converts seconds into SRT's HH:MM:SS,mmm format."""

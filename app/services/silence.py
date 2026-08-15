@@ -25,11 +25,12 @@ def _detect_silences(input_path: str, noise_db: str = "-35dB", min_duration: flo
 
     return list(zip(starts, ends))
 
-
-def remove_silences(input_path: str, output_dir: str, noise_db: str = "-35dB", min_duration: float = 1.5) -> str:
+def remove_silences(input_path: str, output_dir: str, noise_db: str = "-35dB", min_duration: float = 1.5, padding: float = 0.2) -> str:
     """
     Removes silent stretches from a video, keeping only the parts where
-    someone is actually talking. Returns the path to the trimmed file.
+    someone is actually talking. A small `padding` (seconds) is left on
+    both sides of each cut so pauses/breaths sound natural instead of
+    razor-cut. Returns the path to the trimmed file.
     """
     silences = _detect_silences(input_path, noise_db, min_duration)
 
@@ -37,18 +38,25 @@ def remove_silences(input_path: str, output_dir: str, noise_db: str = "-35dB", m
     output_path = Path(output_dir) / f"{uuid.uuid4()}_nosilence.mp4"
 
     if not silences:
-        # Nothing to cut — just copy the file through untouched.
         subprocess.run(["ffmpeg", "-y", "-i", input_path, "-c", "copy", str(output_path)], check=True)
         return str(output_path)
 
-    # Build the list of "keep" segments — the gaps BETWEEN silences.
+    # Build the list of "keep" segments — the gaps BETWEEN silences,
+    # padded inward so a bit of each silence survives on both edges.
     keep_segments = []
     cursor = 0.0
     for start, end in silences:
-        if start > cursor:
-            keep_segments.append((cursor, start))
-        cursor = end
-    keep_segments.append((cursor, None))  # from the last silence to the end of the video
+        padded_start = start + padding
+        padded_end = end - padding
+        # Guard: if the silence is too short for padding on both sides,
+        # fall back to the original unpadded boundaries for this one.
+        if padded_end <= padded_start:
+            padded_start, padded_end = start, end
+
+        if padded_start > cursor:
+            keep_segments.append((cursor, padded_start))
+        cursor = padded_end
+    keep_segments.append((cursor, None))
 
     # Build an ffmpeg filter that trims each "keep" segment and glues them back together.
     filter_parts = []

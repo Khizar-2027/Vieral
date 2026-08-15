@@ -68,16 +68,13 @@ def create_video(
         title=title,
         script_text=script_text,
         background_video_path=background_path,
-        status=VideoStatus.processing,
+        status=VideoStatus.draft,
     )
     db.add(video)
     db.commit()
     db.refresh(video)
 
-    background_tasks.add_task(run_pipeline, video.id)
-
     return video
-
 
 @router.get("", response_model=list[VideoOut])
 def list_videos(
@@ -125,6 +122,19 @@ class VideoEditRequest(BaseModel):
     trim_end: float | None = None
     crop_aspect: str | None = None
     remove_silence: bool = False
+    add_captions: bool = True
+
+@router.get("/{video_id}/source")
+def get_video_source(
+    project_id: str,
+    video_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    video = _get_owned_video(project_id, video_id, db, current_user)
+    if not video.background_video_path or not os.path.exists(video.background_video_path):
+        raise HTTPException(status_code=400, detail="No source video uploaded")
+    return FileResponse(video.background_video_path, media_type="video/mp4")
 
 
 @router.patch("/{video_id}/edit", response_model=VideoOut)
@@ -142,6 +152,7 @@ def edit_video(
     video.trim_end = payload.trim_end
     video.crop_aspect = payload.crop_aspect
     video.remove_silence = payload.remove_silence
+    video.add_captions = payload.add_captions
     video.status = VideoStatus.processing
     db.commit()
     db.refresh(video)
