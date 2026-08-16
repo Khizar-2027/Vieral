@@ -13,13 +13,22 @@ def _format_timestamp(seconds: float) -> str:
     millis = int((seconds - int(seconds)) * 1000)
     return f"{hours:02d}:{minutes:02d}:{secs:02d},{millis:03d}"
 
-
-def generate_captions(audio_path: str, output_dir: str) -> str:
+def _transcribe(audio_path: str) -> list:
     """
-    Transcribes audio_path and writes an .srt subtitle file into output_dir.
-    Returns the path to the generated .srt file.
+    Runs Whisper once and returns the segments as a list (not a generator,
+    since generators can only be consumed once — we need to reuse this
+    data for both captions and pacing).
     """
     segments, _ = _model.transcribe(audio_path)
+    return list(segments)
+
+def generate_captions(audio_path: str, output_dir: str, segments: list | None = None) -> str:
+    """
+    Transcribes audio_path (unless segments are already provided) and
+    writes an .srt subtitle file into output_dir.
+    """
+    if segments is None:
+        segments = _transcribe(audio_path)
 
     Path(output_dir).mkdir(parents=True, exist_ok=True)
     output_path = Path(output_dir) / f"{uuid.uuid4()}_captions.srt"
@@ -32,3 +41,38 @@ def generate_captions(audio_path: str, output_dir: str) -> str:
             f.write(f"{i}\n{start} --> {end}\n{text}\n\n")
 
     return str(output_path)
+
+
+def calculate_pacing(audio_path: str, segments: list | None = None) -> dict:
+    """
+    Calculates speaking pace (words per minute), either from provided
+    segments or by transcribing audio_path if none are given.
+    """
+    if segments is None:
+        segments = _transcribe(audio_path)
+
+    segment_data = []
+    total_words = 0
+    total_duration = 0.0
+
+    for segment in segments:
+        word_count = len(segment.text.strip().split())
+        duration = segment.end - segment.start
+        wpm = (word_count / duration) * 60 if duration > 0 else 0
+
+        segment_data.append({
+            "start": segment.start,
+            "end": segment.end,
+            "word_count": word_count,
+            "wpm": round(wpm, 1),
+        })
+
+        total_words += word_count
+        total_duration += duration
+
+    overall_wpm = (total_words / total_duration) * 60 if total_duration > 0 else 0
+
+    return {
+        "overall_wpm": round(overall_wpm, 1),
+        "segments": segment_data,
+    }
