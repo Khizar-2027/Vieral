@@ -10,13 +10,9 @@ from app.services.silence import remove_silences
 from app.services.captions import generate_captions
 from app.services.burn_captions import burn_captions
 
+import subprocess
 
 def run_editor_pipeline(video_id: str) -> None:
-    """
-    Runs the editor pipeline on an uploaded video: trim (if requested),
-    crop to vertical (if requested), remove silence (if requested),
-    then always caption + burn. Skips any stage the user didn't ask for.
-    """
     db = SessionLocal()
     try:
         video = db.get(Video, video_id)
@@ -49,6 +45,11 @@ def run_editor_pipeline(video_id: str) -> None:
                 video.output_file_path = current_path
 
             video.status = VideoStatus.done
+            db.commit()
+
+        except subprocess.CalledProcessError as e:
+            video.status = VideoStatus.failed
+            video.error_message = f"FFmpeg error: {e.stderr}"
             db.commit()
 
         except Exception as e:
